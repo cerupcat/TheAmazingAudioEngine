@@ -3023,7 +3023,7 @@ static void audioUnitStreamFormatChanged(void *inRefCon, AudioUnit inUnit, Audio
 }
 
 - (void)updateSampleRate {
-    if ( !_useHardwareSampleRate || !self.running) return;
+    if ( !_useHardwareSampleRate || !_started) return;
     
     AudioStreamBasicDescription asbd = {};
     UInt32 size = sizeof(asbd);
