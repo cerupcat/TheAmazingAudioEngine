@@ -1046,7 +1046,7 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
 #if TARGET_OS_IPHONE
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
     
-    if ( ![audioSession setActive:YES error:error] ) {
+    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
         return NO;
     }
     
@@ -1150,7 +1150,7 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
 #if TARGET_OS_IPHONE
     if ( !_interrupted ) {
         NSError *error = nil;
-        if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:NO error:&error] ) {
+        if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
             NSLog(@"TAAE: Couldn't deactivate audio session: %@", error);
         }
     }
@@ -1951,8 +1951,8 @@ BOOL AECurrentThreadIsAudioThread(void) {
 #if !TARGET_OS_TV
     if ( [_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayAndRecord] ) {
         options |= AVAudioSessionCategoryOptionDefaultToSpeaker;
+        options |= _enableBluetoothInput ? AVAudioSessionCategoryOptionAllowBluetoothA2DP | AVAudioSessionCategoryOptionAllowBluetooth : 0;
     }
-    options |= _enableBluetoothInput ? AVAudioSessionCategoryOptionAllowBluetooth : 0;
 #endif
     
     if ( [_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayAndRecord] || [_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayback] ) {
@@ -1960,8 +1960,26 @@ BOOL AECurrentThreadIsAudioThread(void) {
     }
     
     NSError *error = nil;
-    if ( ![audioSession setCategory:_audioSessionCategory withOptions:options error:&error] ) {
-        NSLog(@"TAAE: Error setting audio session category: %@", error);
+    if (@available(iOS 11.0, *)) {
+        AVAudioSessionRouteSharingPolicy policy = AVAudioSessionRouteSharingPolicyDefault;
+        if ([_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayAndRecord]) {
+            policy = AVAudioSessionRouteSharingPolicyLongForm;
+            NSLog(@"long form set");
+        } else {
+            NSLog(@"long form not set");
+        }
+        if ( ![audioSession setCategory:_audioSessionCategory
+                             mode:AVAudioSessionModeDefault
+                     routeSharingPolicy:policy
+                                options:options error:&error] ) {
+            NSLog(@"TAAE: Error setting audio session category: %@", error);
+        }
+    } else {
+        if ( ![audioSession setCategory:_audioSessionCategory
+                            withOptions:options
+                                  error:&error] ) {
+            NSLog(@"TAAE: Error setting audio session category: %@", error);
+        }
     }
 }
 
@@ -2342,10 +2360,10 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
 #if TARGET_OS_IPHONE
 - (void)applicationWillEnterForeground:(NSNotification*)notification {
     NSError *error = nil;
-    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES error:&error] ) {
+    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
         NSLog(@"TAAE: Couldn't activate audio session: %@", error);
     }
-    
+
     if ( _interrupted ) {
         _interrupted = NO;
         
@@ -2379,7 +2397,7 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
             if ( [[UIApplication sharedApplication] applicationState] != UIApplicationStateBackground || _started ) {
                 // make sure we are again the active session
                 NSError *error = nil;
-                if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES error:&error] ) {
+                if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
                     NSLog(@"TAAE: Couldn't activate audio session: %@", error);
                 }
             }
@@ -2543,7 +2561,7 @@ static void audioUnitStreamFormatChanged(void *inRefCon, AudioUnit inUnit, Audio
     if ( audioSession.inputAvailable ) [extraInfo appendFormat:@", input available"];
     
     // Start session
-    if ( ![audioSession setActive:YES error:&error] ) {
+    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
         NSLog(@"TAAE: Couldn't activate audio session: %@", error);
     }
     
