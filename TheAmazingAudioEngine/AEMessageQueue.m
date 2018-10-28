@@ -96,8 +96,9 @@ static const NSTimeInterval kSynchronousTimeoutInterval  = 1.0;
         _lastProcessTime = AECurrentTimeInHostTicks();
         _pollThread = [[AEMessageQueuePollThread alloc] initWithMessageQueue:self];
         _pollThread.pollInterval = kIdleMessagingPollDuration;
-        OSMemoryBarrier();
-        [_pollThread start];
+        @synchronized (self) {
+            [_pollThread start];
+        }
     }
 }
 
