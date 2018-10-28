@@ -1962,7 +1962,7 @@ BOOL AECurrentThreadIsAudioThread(void) {
     NSError *error = nil;
     if (@available(iOS 11.0, *)) {
         AVAudioSessionRouteSharingPolicy policy = AVAudioSessionRouteSharingPolicyDefault;
-        if ([_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayAndRecord]) {
+        if (![_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayAndRecord]) {
             policy = AVAudioSessionRouteSharingPolicyLongForm;
             NSLog(@"long form set");
         } else {
