@@ -1951,7 +1951,7 @@ BOOL AECurrentThreadIsAudioThread(void) {
 #if !TARGET_OS_TV
     if ( [_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayAndRecord] ) {
         options |= AVAudioSessionCategoryOptionDefaultToSpeaker;
-        options |= _enableBluetoothInput ? AVAudioSessionCategoryOptionAllowBluetoothA2DP | AVAudioSessionCategoryOptionAllowBluetooth : 0;
+        options |= _enableBluetoothInput ? AVAudioSessionCategoryOptionAllowBluetoothA2DP : 0;
     }
 #endif
     
@@ -1962,12 +1962,6 @@ BOOL AECurrentThreadIsAudioThread(void) {
     NSError *error = nil;
     if (@available(iOS 11.0, *)) {
         AVAudioSessionRouteSharingPolicy policy = AVAudioSessionRouteSharingPolicyDefault;
-        if (![_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayAndRecord]) {
-            policy = AVAudioSessionRouteSharingPolicyLongForm;
-            NSLog(@"long form set");
-        } else {
-            NSLog(@"long form not set");
-        }
         if ( ![audioSession setCategory:_audioSessionCategory
                              mode:AVAudioSessionModeDefault
                      routeSharingPolicy:policy
@@ -4291,3 +4285,4 @@ static void * firstUpstreamAudiobusSenderPort(AEChannelRef channel) {
 }
 
 @end
+	
