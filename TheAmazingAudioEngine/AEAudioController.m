@@ -2403,6 +2403,9 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
             [[NSNotificationCenter defaultCenter] postNotificationName:AEAudioControllerSessionInterruptionEndedNotification object:self];
         } else if ( [notification.userInfo[AVAudioSessionInterruptionTypeKey] intValue] == AVAudioSessionInterruptionTypeBegan ) {
             if ( _interrupted ) return;
+		
+	    BOOL wasSuspended = [notification.userInfo[AVAudioSessionInterruptionWasSuspendedKey] boolValue];
+            if (wasSuspended) return;
             
             NSLog(@"TAAE: Audio session interrupted");
             _interrupted = YES;
