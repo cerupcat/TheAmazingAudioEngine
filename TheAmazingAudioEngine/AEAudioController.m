@@ -2404,8 +2404,17 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
         } else if ( [notification.userInfo[AVAudioSessionInterruptionTypeKey] intValue] == AVAudioSessionInterruptionTypeBegan ) {
             if ( _interrupted ) return;
 		
-	    BOOL wasSuspended = [notification.userInfo[AVAudioSessionInterruptionWasSuspendedKey] boolValue];
-            if (wasSuspended) return;
+            bool wasSuspended = false;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wtautological-pointer-compare"
+            if (&AVAudioSessionInterruptionWasSuspendedKey != NULL) {
+#pragma clang diagnostic pop
+                NSNumber *obj = [notification.userInfo objectForKey:AVAudioSessionInterruptionWasSuspendedKey];
+                if (obj && ([obj boolValue] == TRUE)) wasSuspended = true;
+            }
+            if (wasSuspended) {
+                return;
+            }
             
             NSLog(@"TAAE: Audio session interrupted");
             _interrupted = YES;
