@@ -51,17 +51,17 @@ static const NSTimeInterval kSynchronousTimeoutInterval  = 1.0;
 
 - (id)initWithMessageQueue:(AEMessageQueue*)messageQueue;
 
-@property (nonatomic, assign) NSTimeInterval pollInterval;
+    @property (nonatomic, assign) NSTimeInterval pollInterval;
 
-@end
+    @end
 
 @interface AEMessageQueue () {
     pthread_mutex_t _mutex;
     BOOL _holdRealtimeProcessing;
 }
 
-@property (nonatomic, readonly) uint64_t lastProcessTime;
-@end
+    @property (nonatomic, readonly) uint64_t lastProcessTime;
+    @end
 
 @implementation AEMessageQueue {
     TPCircularBuffer    _realtimeThreadMessageBuffer;
@@ -72,7 +72,7 @@ static const NSTimeInterval kSynchronousTimeoutInterval  = 1.0;
 
 - (instancetype)initWithMessageBufferLength:(int32_t)numBytes {
     if ( !(self = [super init]) ) return nil;
-    
+
     TPCircularBufferInit(&_realtimeThreadMessageBuffer, numBytes);
     TPCircularBufferInit(&_mainThreadMessageBuffer, numBytes);
     pthread_mutex_init(&_mutex, NULL);
@@ -96,9 +96,8 @@ static const NSTimeInterval kSynchronousTimeoutInterval  = 1.0;
         _lastProcessTime = AECurrentTimeInHostTicks();
         _pollThread = [[AEMessageQueuePollThread alloc] initWithMessageQueue:self];
         _pollThread.pollInterval = kIdleMessagingPollDuration;
-        @synchronized (self) {
-            [_pollThread start];
-        }
+        OSMemoryBarrier();
+        [_pollThread start];
     }
 }
 
@@ -112,58 +111,70 @@ static const NSTimeInterval kSynchronousTimeoutInterval  = 1.0;
     }
 }
 
-void AEMessageQueueProcessMessagesOnRealtimeThread(__unsafe_unretained AEMessageQueue *THIS) {
-    // Only call this from the realtime thread, or the main thread if realtime thread not yet running
+    void AEMessageQueueProcessMessagesOnRealtimeThread(__unsafe_unretained AEMessageQueue *THIS) {
+        // Only call this from the realtime thread, or the main thread if realtime thread not yet running
 
-    if ( pthread_mutex_trylock(&THIS->_mutex) != 0 ) {
-        return;
-    }
-    
-    if ( THIS->_holdRealtimeProcessing ) {
-        pthread_mutex_unlock(&THIS->_mutex);
-        return;
-    }
-    
-    THIS->_lastProcessTime = AECurrentTimeInHostTicks();
-
-    int32_t availableBytes;
-    message_t *buffer = TPCircularBufferTail(&THIS->_realtimeThreadMessageBuffer, &availableBytes);
-    message_t *end = (message_t*)((char*)buffer + availableBytes);
-    message_t message;
-    
-    while ( buffer < end ) {
-        assert(buffer->userInfoLength == 0);
-        
-        memcpy(&message, buffer, sizeof(message));
-        TPCircularBufferConsume(&THIS->_realtimeThreadMessageBuffer, sizeof(message_t));
-        
-        if ( message.block ) {
-            ((__bridge void(^)())message.block)();
+        if ( pthread_mutex_trylock(&THIS->_mutex) != 0 ) {
+            return;
         }
 
-        int32_t availableBytes;
-        message_t *reply = TPCircularBufferHead(&THIS->_mainThreadMessageBuffer, &availableBytes);
-        if ( availableBytes < sizeof(message_t) ) {
-#ifdef DEBUG
-            NSLog(@"AEMessageBuffer: Integrity problem, insufficient space in main thread messaging buffer");
-#endif
+        if ( THIS->_holdRealtimeProcessing ) {
             pthread_mutex_unlock(&THIS->_mutex);
             return;
         }
-        memcpy(reply, &message, sizeof(message_t));
-        TPCircularBufferProduce(&THIS->_mainThreadMessageBuffer, sizeof(message_t));
-        
-        buffer++;
+
+        THIS->_lastProcessTime = AECurrentTimeInHostTicks();
+
+        int32_t availableBytes;
+        message_t *buffer = TPCircularBufferTail(&THIS->_realtimeThreadMessageBuffer, &availableBytes);
+        message_t *end = (message_t*)((char*)buffer + availableBytes);
+        message_t message;
+
+        while ( buffer < end ) {
+            assert(buffer->userInfoLength == 0);
+
+            // Check for available space for reply on main thread buffer, and bail if insufficient
+            int32_t availableBytes;
+            TPCircularBufferHead(&THIS->_mainThreadMessageBuffer, &availableBytes);
+            if ( availableBytes < sizeof(message_t) ) {
+#ifdef DEBUG
+                NSLog(@"AEMessageBuffer: Integrity problem, insufficient space in main thread messaging buffer");
+#endif
+                pthread_mutex_unlock(&THIS->_mutex);
+                return;
+            }
+
+            // Process message for realtime thread
+            memcpy(&message, buffer, sizeof(message));
+            TPCircularBufferConsume(&THIS->_realtimeThreadMessageBuffer, sizeof(message_t));
+
+            if ( message.block ) {
+                ((__bridge void(^)(void))message.block)();
+            }
+
+            // Write reply to main thread buffer, checking again for available space (above block call may have caused additional writes)
+            message_t *reply = TPCircularBufferHead(&THIS->_mainThreadMessageBuffer, &availableBytes);
+            if ( availableBytes < sizeof(message_t) ) {
+#ifdef DEBUG
+                NSLog(@"AEMessageBuffer: Integrity problem, insufficient space in main thread messaging buffer");
+#endif
+                pthread_mutex_unlock(&THIS->_mutex);
+                return;
+            }
+            memcpy(reply, &message, sizeof(message_t));
+            TPCircularBufferProduce(&THIS->_mainThreadMessageBuffer, sizeof(message_t));
+
+            buffer++;
+        }
+
+        pthread_mutex_unlock(&THIS->_mutex);
     }
-    
-    pthread_mutex_unlock(&THIS->_mutex);
-}
 
 -(void)processMainThreadMessages {
     [self processMainThreadMessagesMatchingResponseBlock:nil];
 }
 
--(void)processMainThreadMessagesMatchingResponseBlock:(void (^)())responseBlock {
+-(void)processMainThreadMessagesMatchingResponseBlock:(void (^)(void))responseBlock {
     pthread_t thread = pthread_self();
     BOOL isMainThread = [NSThread isMainThread];
 
@@ -176,17 +187,17 @@ void AEMessageQueueProcessMessagesOnRealtimeThread(__unsafe_unretained AEMessage
             if ( !buffer ) {
                 break;
             }
-            
+
             message_t *bufferEnd = (message_t*)(((char*)buffer)+availableBytes);
             BOOL hasUnservicedMessages = NO;
-            
+
             // Look through pending messages
             while ( buffer < bufferEnd && !message ) {
                 int messageLength = sizeof(message_t) + buffer->userInfoLength;
 
                 if ( !buffer->replyServiced ) {
                     // This is a message that hasn't yet been serviced
-                    
+
                     if ( (buffer->sourceThread && buffer->sourceThread != thread) && (buffer->sourceThread == NULL && !isMainThread) ) {
                         // Skip this message, it's for a different thread
                         hasUnservicedMessages = YES;
@@ -200,25 +211,25 @@ void AEMessageQueueProcessMessagesOnRealtimeThread(__unsafe_unretained AEMessage
                         buffer->replyServiced = YES;
                     }
                 }
-                
+
                 // Advance to next message
                 buffer = (message_t*)(((char*)buffer)+messageLength);
-                
+
                 if ( !hasUnservicedMessages ) {
                     // If we're done with all message records so far, free up the buffer
                     TPCircularBufferConsume(&_mainThreadMessageBuffer, messageLength);
                 }
             }
         }
-        
+
         if ( !message ) {
             break;
         }
-        
+
         if ( message->responseBlock ) {
-            ((__bridge void(^)())message->responseBlock)();
+            ((__bridge void(^)(void))message->responseBlock)();
             CFBridgingRelease(message->responseBlock);
-            
+
             _pendingResponses--;
             if ( _pollThread && _pendingResponses == 0 ) {
                 _pollThread.pollInterval = kIdleMessagingPollDuration;
@@ -227,55 +238,55 @@ void AEMessageQueueProcessMessagesOnRealtimeThread(__unsafe_unretained AEMessage
             message->handler(message->userInfoLength > 0 ? message+1 : NULL,
                              message->userInfoLength);
         }
-        
+
         if ( message->block ) {
             CFBridgingRelease(message->block);
         }
-        
+
         free(message);
     }
 }
 
-- (void)performAsynchronousMessageExchangeWithBlock:(void (^)())block
-                                      responseBlock:(void (^)())responseBlock
+- (void)performAsynchronousMessageExchangeWithBlock:(void (^)(void))block
+                                      responseBlock:(void (^)(void))responseBlock
                                        sourceThread:(pthread_t)sourceThread {
     @synchronized ( self ) {
 
         int32_t availableBytes;
         message_t *message = TPCircularBufferHead(&_realtimeThreadMessageBuffer, &availableBytes);
-        
+
         if ( availableBytes < sizeof(message_t) ) {
             NSLog(@"AEMessageQueue: Unable to perform message exchange - queue is full.");
             return;
         }
-        
+
         if ( responseBlock ) {
             _pendingResponses++;
-            
+
             if ( _pollThread.pollInterval == kIdleMessagingPollDuration ) {
                 // Perform more rapid active polling while we expect a response
                 _pollThread.pollInterval = kActiveMessagingPollDuration;
             }
         }
-        
+
         memset(message, 0, sizeof(message_t));
         message->block         = block ? (__bridge_retained void*)[block copy] : NULL;
         message->responseBlock = responseBlock ? (__bridge_retained void*)[responseBlock copy] : NULL;
         message->sourceThread  = sourceThread; // Used only for synchronous message exchange
-        
+
         TPCircularBufferProduce(&_realtimeThreadMessageBuffer, sizeof(message_t));
-        
+
     }
 }
 
 
-- (void)performAsynchronousMessageExchangeWithBlock:(void (^)())block responseBlock:(void (^)())responseBlock {
+- (void)performAsynchronousMessageExchangeWithBlock:(void (^)(void))block responseBlock:(void (^)(void))responseBlock {
     [self performAsynchronousMessageExchangeWithBlock:block responseBlock:responseBlock sourceThread:NULL];
 }
 
-- (BOOL)performSynchronousMessageExchangeWithBlock:(void (^)())block {
+- (BOOL)performSynchronousMessageExchangeWithBlock:(void (^)(void))block {
     __block BOOL finished = NO;
-    void (^responseBlock)() = ^{ finished = YES; };
+    void (^responseBlock)(void) = ^{ finished = YES; };
     [self performAsynchronousMessageExchangeWithBlock:block
                                         responseBlock:responseBlock
                                          sourceThread:pthread_self()];
@@ -287,11 +298,11 @@ void AEMessageQueueProcessMessagesOnRealtimeThread(__unsafe_unretained AEMessage
         if ( finished ) break;
         [NSThread sleepForTimeInterval: kActiveMessagingPollDuration];
     }
-    
+
     if ( !finished ) {
         NSLog(@"AEMessageQueue: Timed out while performing synchronous message exchange");
     }
-    
+
     return finished;
 }
 
@@ -307,36 +318,36 @@ void AEMessageQueueProcessMessagesOnRealtimeThread(__unsafe_unretained AEMessage
     pthread_mutex_unlock(&_mutex);
 }
 
-void AEMessageQueueSendMessageToMainThread(__unsafe_unretained AEMessageQueue *THIS,
-                                           AEMessageQueueMessageHandler        handler,
-                                           void                               *userInfo,
-                                           int                                 userInfoLength) {
-    
-    int32_t availableBytes;
-    message_t *message = TPCircularBufferHead(&THIS->_mainThreadMessageBuffer, &availableBytes);
-    if ( availableBytes < sizeof(message_t) + userInfoLength ) {
+    void AEMessageQueueSendMessageToMainThread(__unsafe_unretained AEMessageQueue *THIS,
+                                               AEMessageQueueMessageHandler        handler,
+                                               void                               *userInfo,
+                                               int                                 userInfoLength) {
+
+        int32_t availableBytes;
+        message_t *message = TPCircularBufferHead(&THIS->_mainThreadMessageBuffer, &availableBytes);
+        if ( availableBytes < sizeof(message_t) + userInfoLength ) {
 #ifdef DEBUG
-        NSLog(@"AEMessageBuffer: Integrity problem, insufficient space in main thread messaging buffer");
+            NSLog(@"AEMessageBuffer: Integrity problem, insufficient space in main thread messaging buffer");
 #endif
-        return;
-    }
-    memset(message, 0, sizeof(message_t));
-    message->handler                = handler;
-    message->userInfoLength         = userInfoLength;
-    
-    if ( userInfoLength > 0 ) {
-        memcpy((message+1), userInfo, userInfoLength);
-    }
-    
-    TPCircularBufferProduce(&THIS->_mainThreadMessageBuffer, sizeof(message_t) + userInfoLength);
-}
+            return;
+        }
+        memset(message, 0, sizeof(message_t));
+        message->handler                = handler;
+        message->userInfoLength         = userInfoLength;
 
-static BOOL AEMessageQueueHasPendingMainThreadMessages(__unsafe_unretained AEMessageQueue *THIS) {
-    int32_t ignore;
-    return TPCircularBufferTail(&THIS->_mainThreadMessageBuffer, &ignore) != NULL;
-}
+        if ( userInfoLength > 0 ) {
+            memcpy((message+1), userInfo, userInfoLength);
+        }
 
-@end
+        TPCircularBufferProduce(&THIS->_mainThreadMessageBuffer, sizeof(message_t) + userInfoLength);
+    }
+
+    static BOOL AEMessageQueueHasPendingMainThreadMessages(__unsafe_unretained AEMessageQueue *THIS) {
+        int32_t ignore;
+        return TPCircularBufferTail(&THIS->_mainThreadMessageBuffer, &ignore) != NULL;
+    }
+
+    @end
 
 
 @implementation AEMessageQueuePollThread {
@@ -363,4 +374,4 @@ static BOOL AEMessageQueueHasPendingMainThreadMessages(__unsafe_unretained AEMes
         }
     }
 }
-@end
+    @end
