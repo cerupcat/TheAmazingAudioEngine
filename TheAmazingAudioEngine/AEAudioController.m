@@ -1046,7 +1046,7 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
 #if TARGET_OS_IPHONE
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
     
-    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
+    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES error:&error] ) {
         return NO;
     }
     
@@ -1150,7 +1150,7 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
 #if TARGET_OS_IPHONE
     if ( !_interrupted ) {
         NSError *error = nil;
-        if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
+        if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:NO error:&error] ) {
             NSLog(@"TAAE: Couldn't deactivate audio session: %@", error);
         }
     }
@@ -2354,7 +2354,7 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
 #if TARGET_OS_IPHONE
 - (void)applicationDidBecomeActive:(NSNotification*)notification {
     NSError *error = nil;
-    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
+    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES error:&error] ) {
         NSLog(@"TAAE: Couldn't activate audio session: %@", error);
     }
 
@@ -2391,7 +2391,7 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
             if ( [[UIApplication sharedApplication] applicationState] != UIApplicationStateBackground || _started ) {
                 // make sure we are again the active session
                 NSError *error = nil;
-                if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
+                if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES error:&error] ) {
                     NSLog(@"TAAE: Couldn't activate audio session: %@", error);
                 }
             }
@@ -2567,7 +2567,7 @@ static void audioUnitStreamFormatChanged(void *inRefCon, AudioUnit inUnit, Audio
     if ( audioSession.inputAvailable ) [extraInfo appendFormat:@", input available"];
     
     // Start session
-    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error] ) {
+    if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES error:&error] ) {
         NSLog(@"TAAE: Couldn't activate audio session: %@", error);
     }
     
