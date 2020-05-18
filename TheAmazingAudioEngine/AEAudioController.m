@@ -1100,25 +1100,25 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
     }
 
 #if TARGET_OS_IPHONE && !TARGET_OS_TV
-    if ( _inputEnabled ) {
-        if ( [audioSession respondsToSelector:@selector(requestRecordPermission:)] ) {
-            [audioSession requestRecordPermission:^(BOOL granted) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    if ( granted ) {
-                        [self updateInputDeviceStatus];
-                    } else {
-                        [[NSNotificationCenter defaultCenter] postNotificationName:AEAudioControllerErrorOccurredNotification
-                                                                            object:self
-                                                                          userInfo:@{ AEAudioControllerErrorKey: [NSError errorWithDomain:AEAudioControllerErrorDomain
-                                                                                                                                     code:AEAudioControllerErrorInputAccessDenied
-                                                                                                                                 userInfo:nil]}];
-                    }
-                });
-            }];
-        } else {
-            [self updateInputDeviceStatus];
-        }
-    }
+//    if ( _inputEnabled ) {
+//        if ( [audioSession respondsToSelector:@selector(requestRecordPermission:)] ) {
+//            [audioSession requestRecordPermission:^(BOOL granted) {
+//                dispatch_async(dispatch_get_main_queue(), ^{
+//                    if ( granted ) {
+//                        [self updateInputDeviceStatus];
+//                    } else {
+//                        [[NSNotificationCenter defaultCenter] postNotificationName:AEAudioControllerErrorOccurredNotification
+//                                                                            object:self
+//                                                                          userInfo:@{ AEAudioControllerErrorKey: [NSError errorWithDomain:AEAudioControllerErrorDomain
+//                                                                                                                                     code:AEAudioControllerErrorInputAccessDenied
+//                                                                                                                                 userInfo:nil]}];
+//                    }
+//                });
+//            }];
+//        } else {
+//            [self updateInputDeviceStatus];
+//        }
+//    }
 #endif
 
     
