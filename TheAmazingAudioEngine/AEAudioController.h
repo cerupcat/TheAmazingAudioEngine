@@ -537,24 +537,22 @@ typedef enum {
  *
  * @deprecated Use AEAudioStreamBasicDescriptionInterleaved16BitStereo instead.
  */
-+ (AudioStreamBasicDescription)interleaved16BitStereoAudioDescription;
-// Soon:    __deprecated_msg("use AEAudioStreamBasicDescriptionInterleaved16BitStereo instead");
++ (AudioStreamBasicDescription)interleaved16BitStereoAudioDescription __deprecated_msg("use AEAudioStreamBasicDescriptionInterleaved16BitStereo instead");
 
 /*!
  * 16-bit stereo audio description, non-interleaved
  *
  * @deprecated Use AEAudioStreamBasicDescriptionNonInterleaved16BitStereo instead.
  */
-+ (AudioStreamBasicDescription)nonInterleaved16BitStereoAudioDescription;
-// Soon:    __deprecated_msg("use AEAudioStreamBasicDescriptionNonInterleaved16BitStereo instead");
++ (AudioStreamBasicDescription)nonInterleaved16BitStereoAudioDescription __deprecated_msg("use AEAudioStreamBasicDescriptionNonInterleaved16BitStereo instead");
 
 /*!
  * Floating-point stereo audio description, non-interleaved
  *
  * @deprecated Use AEAudioStreamBasicDescriptionNonInterleavedFloatStereo instead.
  */
-+ (AudioStreamBasicDescription)nonInterleavedFloatStereoAudioDescription;
-// Soon:    __deprecated_msg("use AEAudioStreamBasicDescriptionNonInterleavedFloatStereo instead");
++ (AudioStreamBasicDescription)nonInterleavedFloatStereoAudioDescription __deprecated_msg("use AEAudioStreamBasicDescriptionNonInterleavedFloatStereo instead");
+
 
 /*!
  * Determine whether voice processing is available on this device
@@ -699,16 +697,18 @@ typedef enum {
  *  Takes an array of one or more objects that implement the @link AEAudioPlayable @endlink protocol.
  *
  * @param channels An array of id<AEAudioPlayable> objects
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addChannels:(NSArray*)channels;
+- (void)addChannels:(NSArray*)channels completionBlock:(void(^)(void))block;
 
 /*!
  * Add channels to a channel group
  *
  * @param channels Array of id<AEAudioPlayable> objects
  * @param group    Group identifier
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addChannels:(NSArray*)channels toChannelGroup:(AEChannelGroupRef)group;
+- (void)addChannels:(NSArray*)channels toChannelGroup:(AEChannelGroupRef)group completionBlock:(void(^)(void))block;
 
 /*!
  * Remove channels
@@ -716,16 +716,18 @@ typedef enum {
  *  Takes an array of one or more objects that implement the @link AEAudioPlayable @endlink protocol.
  *
  * @param channels An array of id<AEAudioPlayable> objects
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeChannels:(NSArray*)channels;
+- (void)removeChannels:(NSArray*)channels completionBlock:(void(^)(void))block;
 
 /*!
  * Remove channels from a channel group
  *
  * @param channels Array of id<AEAudioPlayable> objects
  * @param group    Group identifier
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeChannels:(NSArray*)channels fromChannelGroup:(AEChannelGroupRef)group;
+- (void)removeChannels:(NSArray*)channels fromChannelGroup:(AEChannelGroupRef)group completionBlock:(void(^)(void))block;
 
 /*!
  * Obtain a list of all channels, across all channel groups
@@ -749,9 +751,10 @@ typedef enum {
  *  You can create trees of channel groups using @link addChannels:toChannelGroup: @endlink, with
  *  filtering at each branch, for complex filter chaining.
  *
+ * @param block Block to call upon completion (or nil)
  * @return An identifier for the created group
  */
-- (AEChannelGroupRef)createChannelGroup;
+- (AEChannelGroupRef)createChannelGroupWithCompletionBlock:(void(^)(AEChannelGroupRef))block;
 
 /*!
  * Create a channel sub-group within an existing channel group
@@ -760,9 +763,10 @@ typedef enum {
  *  each branch of the tree.
  *
  * @param group Group identifier
+ * @param block Block to call upon completion (or nil)
  * @return An identifier for the created group
  */
-- (AEChannelGroupRef)createChannelGroupWithinChannelGroup:(AEChannelGroupRef)group;
+- (AEChannelGroupRef)createChannelGroupWithinChannelGroup:(AEChannelGroupRef)group completionBlock:(void (^)(AEChannelGroupRef))block;
 
 /*!
  * Remove a channel group
@@ -770,8 +774,9 @@ typedef enum {
  *  Removes channels from the group and releases associated resources.
  *
  * @param group Group identifier
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeChannelGroup:(AEChannelGroupRef)group;
+- (void)removeChannelGroup:(AEChannelGroupRef)group completionBlock:(void(^)(void))block;
 
 /*!
  * Get a list of top-level channel groups
@@ -869,8 +874,9 @@ typedef enum {
  *  Audio filters are used to process live audio before playback.
  *
  * @param filter An object that implements the AEAudioFilter protocol
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addFilter:(id<AEAudioFilter>)filter;
+- (void)addFilter:(id<AEAudioFilter>)filter completionBlock:(void(^)(void))block;
 
 /*!
  * Add an audio filter to a channel
@@ -879,7 +885,7 @@ typedef enum {
  *
  *  You can apply audio filters to one or more channels - use channel groups to do so
  *  without the extra performance overhead by pre-mixing channels together first. See
- *  @link createChannelGroup @endlink.
+ *  @link createChannelGroupWithCompletionBlock: @endlink.
  *
  *  You can also apply more than one audio filter to a channel - each audio filter will
  *  be performed on the audio in the order in which the filters were added using this
@@ -887,8 +893,9 @@ typedef enum {
  *
  * @param filter  An object that implements the AEAudioFilter protocol
  * @param channel The channel on which to perform audio processing
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addFilter:(id<AEAudioFilter>)filter toChannel:(id<AEAudioPlayable>)channel;
+- (void)addFilter:(id<AEAudioFilter>)filter toChannel:(id<AEAudioPlayable>)channel completionBlock:(void(^)(void))block;
 
 /*!
  * Add an audio filter to a channel group
@@ -900,8 +907,9 @@ typedef enum {
  *
  * @param filter An object that implements the AEAudioFilter protocol
  * @param group  The channel group on which to perform audio processing
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addFilter:(id<AEAudioFilter>)filter toChannelGroup:(AEChannelGroupRef)group;
+- (void)addFilter:(id<AEAudioFilter>)filter toChannelGroup:(AEChannelGroupRef)group completionBlock:(void(^)(void))block;
 
 /*!
  * Add an audio filter to the system input
@@ -909,8 +917,9 @@ typedef enum {
  *  Audio filters are used to process live audio.
  *
  * @param filter An object that implements the AEAudioFilter protocol
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addInputFilter:(id<AEAudioFilter>)filter;
+- (void)addInputFilter:(id<AEAudioFilter>)filter completionBlock:(void(^)(void))block;
 
 /*!
  * Add an audio filter to the system input
@@ -919,38 +928,43 @@ typedef enum {
  *
  * @param filter An object that implements the AEAudioFilter protocol
  * @param channels An array of NSNumbers identifying by index the input channels to filter, or nil for default (the same as addInputFilter:)
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addInputFilter:(id<AEAudioFilter>)filter forChannels:(NSArray*)channels;
+- (void)addInputFilter:(id<AEAudioFilter>)filter forChannels:(NSArray*)channels completionBlock:(void(^)(void))block;
 
 /*!
  * Remove a filter from system output
  *
  * @param filter The filter to remove
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeFilter:(id<AEAudioFilter>)filter;
+- (void)removeFilter:(id<AEAudioFilter>)filter completionBlock:(void(^)(void))block;
 
 /*!
  * Remove a filter from a channel
  *
  * @param filter  The filter to remove
  * @param channel The channel to stop filtering
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeFilter:(id<AEAudioFilter>)filter fromChannel:(id<AEAudioPlayable>)channel;
+- (void)removeFilter:(id<AEAudioFilter>)filter fromChannel:(id<AEAudioPlayable>)channel completionBlock:(void(^)(void))block;
 
 /*!
  * Remove a filter from a channel group
  *
  * @param filter The filter to remove
  * @param group  The group to stop filtering
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeFilter:(id<AEAudioFilter>)filter fromChannelGroup:(AEChannelGroupRef)group;
+- (void)removeFilter:(id<AEAudioFilter>)filter fromChannelGroup:(AEChannelGroupRef)group completionBlock:(void(^)(void))block;
 
 /*!
  * Remove a filter from system input
  *
  * @param filter The filter to remove
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeInputFilter:(id<AEAudioFilter>)filter;
+- (void)removeInputFilter:(id<AEAudioFilter>)filter completionBlock:(void(^)(void))block;
 
 /*!
  * Get a list of all top-level output filters
@@ -989,8 +1003,9 @@ typedef enum {
  *  mixed together.
  *
  * @param receiver An object that implements the AEAudioReceiver protocol
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addOutputReceiver:(id<AEAudioReceiver>)receiver;
+- (void)addOutputReceiver:(id<AEAudioReceiver>)receiver completionBlock:(void(^)(void))block;
 
 /*!
  * Add an output receiver
@@ -1000,8 +1015,9 @@ typedef enum {
  *
  * @param receiver An object that implements the AEAudioReceiver protocol
  * @param channel  A channel
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addOutputReceiver:(id<AEAudioReceiver>)receiver forChannel:(id<AEAudioPlayable>)channel;
+- (void)addOutputReceiver:(id<AEAudioReceiver>)receiver forChannel:(id<AEAudioPlayable>)channel completionBlock:(void(^)(void))block;
 
 /*!
  * Add an output receiver for a particular channel group
@@ -1012,31 +1028,35 @@ typedef enum {
  *
  * @param receiver An object that implements the AEAudioReceiver protocol
  * @param group    A channel group identifier
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addOutputReceiver:(id<AEAudioReceiver>)receiver forChannelGroup:(AEChannelGroupRef)group;
+- (void)addOutputReceiver:(id<AEAudioReceiver>)receiver forChannelGroup:(AEChannelGroupRef)group completionBlock:(void(^)(void))block;
 
 /*!
  * Remove an output receiver
  *
  * @param receiver The receiver to remove
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeOutputReceiver:(id<AEAudioReceiver>)receiver;
+- (void)removeOutputReceiver:(id<AEAudioReceiver>)receiver completionBlock:(void(^)(void))block;
 
 /*!
  * Remove an output receiver from a channel
  *
  * @param receiver The receiver to remove
  * @param channel  Channel to remove receiver from
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeOutputReceiver:(id<AEAudioReceiver>)receiver fromChannel:(id<AEAudioPlayable>)channel;
+- (void)removeOutputReceiver:(id<AEAudioReceiver>)receiver fromChannel:(id<AEAudioPlayable>)channel completionBlock:(void(^)(void))block;
 
 /*!
  * Remove an output receiver from a particular channel group
  *
  * @param receiver The receiver to remove
  * @param group    A channel group identifier
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeOutputReceiver:(id<AEAudioReceiver>)receiver fromChannelGroup:(AEChannelGroupRef)group;
+- (void)removeOutputReceiver:(id<AEAudioReceiver>)receiver fromChannelGroup:(AEChannelGroupRef)group completionBlock:(void(^)(void))block;
 
 /*!
  * Obtain a list of all top-level output receivers
@@ -1068,17 +1088,18 @@ typedef enum {
  *  Input receivers receive audio that is being received by the microphone or another input device.
  *
  *  Note that the audio format provided to input receivers added via this method depends on the value
- *  of @link inputMode @endlink. 
+ *  of @link inputMode @endlink.
  *
- *  Check the audio buffer list parameters to determine the kind of audio you are receiving (for example, 
+ *  Check the audio buffer list parameters to determine the kind of audio you are receiving (for example,
  *  if you are using an interleaved format such as @link interleaved16BitStereoAudioDescription @endlink
  *  then the audio->mBuffers[0].mNumberOfChannels field will be 1 for mono, and 2 for stereo audio).  If you
  *  are using a non-interleaved format such as @link nonInterleaved16BitStereoAudioDescription @endlink, then
  *  audio->mNumberBuffers will be 1 for mono, and 2 for stereo.
  *
  * @param receiver An object that implements the AEAudioReceiver protocol
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addInputReceiver:(id<AEAudioReceiver>)receiver;
+- (void)addInputReceiver:(id<AEAudioReceiver>)receiver completionBlock:(void(^)(void))block;
 
 /*!
  * Add an input receiver, specifying a channel selection
@@ -1099,8 +1120,9 @@ typedef enum {
  *
  * @param receiver An object that implements the AEAudioReceiver protocol
  * @param channels An array of NSNumbers identifying by index the input channels to receive, or nil for default (the same as addInputReceiver:)
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addInputReceiver:(id<AEAudioReceiver>)receiver forChannels:(NSArray*)channels;
+- (void)addInputReceiver:(id<AEAudioReceiver>)receiver forChannels:(NSArray*)channels completionBlock:(void(^)(void))block;
 
 /*!
  * Remove an input receiver
@@ -1108,16 +1130,18 @@ typedef enum {
  *  If receiver is registered for multiple channels, it will be removed for all of them.
  *
  * @param receiver Receiver to remove
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeInputReceiver:(id<AEAudioReceiver>)receiver;
+- (void)removeInputReceiver:(id<AEAudioReceiver>)receiver completionBlock:(void(^)(void))block;
 
 /*!
  * Remove an input receiver
  *
  * @param receiver Receiver to remove
  * @param channels Specific channels to remove receiver from
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeInputReceiver:(id<AEAudioReceiver>)receiver fromChannels:(NSArray*)channels;
+- (void)removeInputReceiver:(id<AEAudioReceiver>)receiver fromChannels:(NSArray*)channels completionBlock:(void(^)(void))block;
 
 /*!
  * Obtain a list of all input receivers
@@ -1140,15 +1164,17 @@ typedef enum {
  *  This mechanism can be used to trigger time-dependent events.
  *
  * @param receiver An object that implements the AEAudioTimingReceiver protocol
+ * @param block Block to call upon completion (or nil)
  */
-- (void)addTimingReceiver:(id<AEAudioTimingReceiver>)receiver;
+- (void)addTimingReceiver:(id<AEAudioTimingReceiver>)receiver completionBlock:(void(^)(void))block;
 
 /*!
  * Remove a timing receiver
  *
  * @param receiver An object that implements the AEAudioTimingReceiver protocol
+ * @param block Block to call upon completion (or nil)
  */
-- (void)removeTimingReceiver:(id<AEAudioTimingReceiver>)receiver;
+- (void)removeTimingReceiver:(id<AEAudioTimingReceiver>)receiver completionBlock:(void(^)(void))block;
 
 /*!
  * Obtain a list of all timing receivers
@@ -1163,7 +1189,7 @@ typedef enum {
 /*!
  * The asynchronous message queue used for safe communication between main and realtime thread
  *
- *  If @link running @endlink is NO, then message blocks passed to this instance will be performed 
+ *  If @link running @endlink is NO, then message blocks passed to this instance will be performed
  *  on the main thread instead of the realtime thread.
  */
 @property (nonatomic, readonly, strong) AEMessageQueue *messageQueue;
@@ -1171,7 +1197,7 @@ typedef enum {
 /*!
  * Send a message to the realtime thread asynchronously, if running, optionally receiving a response via a block.
  *
- *  This is a synchronization mechanism that allows you to schedule actions to be performed 
+ *  This is a synchronization mechanism that allows you to schedule actions to be performed
  *  on the realtime audio thread without any locking mechanism required.  Pass in a block, and
  *  the block will be performed on the realtime thread at the next polling interval.
  *
@@ -1189,13 +1215,13 @@ typedef enum {
  * @param block         A block to be performed on the realtime thread.
  * @param responseBlock A block to be performed on the main thread after the handler has been run, or nil.
  */
-- (void)performAsynchronousMessageExchangeWithBlock:(void (^)())block
-                                      responseBlock:(void (^)())responseBlock;
+- (void)performAsynchronousMessageExchangeWithBlock:(void (^)(void))block
+                                      responseBlock:(void (^)(void))responseBlock;
 
 /*!
  * Send a message to the realtime thread synchronously, if running.
  *
- *  This is a synchronization mechanism that allows you to schedule actions to be performed 
+ *  This is a synchronization mechanism that allows you to schedule actions to be performed
  *  on the realtime audio thread without any locking mechanism required. Pass in a block, and
  *  the block will be performed on the realtime thread at the next polling interval.
  *
@@ -1217,14 +1243,14 @@ typedef enum {
  * @param block         A block to be performed on the realtime thread.
  * @return              YES if the block could be performed, NO otherwise.
  */
-- (BOOL)performSynchronousMessageExchangeWithBlock:(void (^)())block;
+- (BOOL)performSynchronousMessageExchangeWithBlock:(void (^)(void))block;
 
 /*!
  * Send a message to the main thread asynchronously
  *
- *  This is a synchronization mechanism that allows you to schedule actions to be performed 
+ *  This is a synchronization mechanism that allows you to schedule actions to be performed
  *  on the main thread, without any locking or memory allocation.  Pass in a function pointer and
- *  optionally a pointer to data to be copied and passed to the handler, and the function will 
+ *  optionally a pointer to data to be copied and passed to the handler, and the function will
  *  be called on the realtime thread at the next polling interval.
  *
  *  Tip: To pass a pointer (including pointers to __unsafe_unretained Objective-C objects) through the
@@ -1383,7 +1409,7 @@ BOOL AECurrentThreadIsAudioThread(void);
  *
  *  When this is YES, your app's audio will be mixed with the output of other applications.
  *  If NO, then any other apps playing audio will be stopped when the audio engine is started.
- *  
+ *
  *  Note: If you are using remote controls with `UIApplication`'s `beginReceivingRemoteControlEvents`,
  *  setting this to YES will stop the remote controls working. This is an iOS limitation.
  *
@@ -1432,7 +1458,7 @@ BOOL AECurrentThreadIsAudioThread(void);
 @property (nonatomic, assign) BOOL boostBuiltInMicGainInMeasurementMode;
 #endif
 
-/*! 
+/*!
  * Mute output
  *
  *  Set to YES to mute all system output. Note that even if this is YES, playback
@@ -1479,7 +1505,7 @@ BOOL AECurrentThreadIsAudioThread(void);
  *  while simultaneously recording through the microphone.  Not suitable for music,
  *  but works adequately well for speech.
  *
- *  Note that changing this value will cause the entire audio system to be shut down 
+ *  Note that changing this value will cause the entire audio system to be shut down
  *  and restarted with the new setting, which will result in a break in audio playback.
  *
  *  Enabling voice processing in short buffer duration environments (< 0.01s) may cause
@@ -1500,10 +1526,10 @@ BOOL AECurrentThreadIsAudioThread(void);
  */
 @property (nonatomic, assign) BOOL voiceProcessingOnlyForSpeakerAndMicrophone;
 
-/*! 
+/*!
  * Input mode: How to handle incoming audio
  *
- *  If you are using an audio format with more than one channel, this setting 
+ *  If you are using an audio format with more than one channel, this setting
  *  defines how the system receives incoming audio.
  *
  *  See @link AEInputMode @endlink for a description of the available options.
@@ -1518,7 +1544,7 @@ BOOL AECurrentThreadIsAudioThread(void);
  *  When there are more than one input channel, you may specify which of the
  *  available channels are actually used as input. This is an array of NSNumbers,
  *  each referring to a channel (starting with the number 0 for the first channel).
- *  
+ *
  *  Specified input channels will be mapped to output chanels in the order they appear
  *  in this array, so the first channel specified will be mapped to the first output
  *  channel (the only output channel, if output is mono, or the left channel for stereo
@@ -1577,7 +1603,7 @@ BOOL AECurrentThreadIsAudioThread(void);
  *  If this property to YES (defautlt), the timestamps you see in the various
  *  callbacks will automatically account for input and output latency. If you set
  *  this property to NO and you wish to account for latency, you will need to use
- *  the @link inputLatency @endlink and @link outputLatency @endlink properties, 
+ *  the @link inputLatency @endlink and @link outputLatency @endlink properties,
  *  or their corresponding C functions @link AEAudioControllerInputLatency @endlink
  *  and @link AEAudioControllerOutputLatency @endlink yourself.
  *
@@ -1643,7 +1669,7 @@ BOOL AECurrentThreadIsAudioThread(void);
 
 /*!
  * The audio description defining the input audio format
- * 
+ *
  *  Note: This property is observable
  *
  *  See also @link inputMode @endlink and @link inputChannelSelection @endlink
